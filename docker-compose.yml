@@ -2,10 +2,8 @@ services:
   postgres:
     image: postgres:15
     container_name: personal_finance_postgres
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: example
-      POSTGRES_DB: postgres
+    env_file:
+      - .env
     ports:
       - "5432:5432"
     volumes:
@@ -14,13 +12,8 @@ services:
   backend:
     build: ./backend
     container_name: personal_finance_backend
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: example
-      POSTGRES_DB: postgres
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      FLASK_ENV: development
+    env_file:
+      - .env
     ports:
       - "5000:5000"
     depends_on:
