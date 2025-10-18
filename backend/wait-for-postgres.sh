@@ -1,25 +1,28 @@
-# Use official Python image
-FROM python:3.9-slim
+#!/bin/sh
 
-WORKDIR /app
+# Wait-for-Postgres script
+# Usage: ./wait-for-postgres.sh <host> <port> <user> <db>
 
-# Install psql client and other dependencies
-RUN apt-get update && apt-get install -y postgresql-client gcc libpq-dev && rm -rf /var/lib/apt/lists/*
+set -e
 
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+HOST=${1:-postgres}
+PORT=${2:-5432}
+USER=${3:-postgres}
+DB=${4:-postgres}
 
-# Copy app source code
-COPY . .
+echo "Waiting for postgres at $HOST:$PORT..."
 
-# Make wait script executable
-RUN chmod +x wait-for-postgres.sh
+# Install PostgreSQL client if not present
+if ! command -v psql > /dev/null; then
+    echo "psql not found. Installing postgresql-client..."
+    apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
+fi
 
-ENV FLASK_APP=app.py
-ENV FLASK_RUN_HOST=0.0.0.0
-ENV FLASK_ENV=development
+# Wait until Postgres is ready
+until PGPASSWORD=$POSTGRES_PASSWORD psql -h "$HOST" -U "$USER" -d "$DB" -c '\q' 2>/dev/null; do
+  echo "Postgres is unavailable - sleeping"
+  sleep 2
+done
 
-EXPOSE 5000
-
-CMD ["./wait-for-postgres.sh", "postgres:5432", "--", "flask", "run"]
+echo "Postgres is up - executing command"
+exec "$@"
