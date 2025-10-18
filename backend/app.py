@@ -1,38 +1,58 @@
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-import os
+from flask import Flask, request, jsonify
+import psycopg2
+from config import DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME
 
 app = Flask(__name__)
 
-# Use environment variables directly (with default fallback)
-POSTGRES_USER = os.environ.get("POSTGRES_USER", "postgres")
-POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "example")
-POSTGRES_DB = os.environ.get("POSTGRES_DB", "postgres")
-POSTGRES_HOST = os.environ.get("POSTGRES_HOST", "localhost")
-POSTGRES_PORT = os.environ.get("POSTGRES_PORT", 5432)
+def get_connection():
+    return psycopg2.connect(
+        dbname=DB_NAME,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        host=DB_HOST,
+        port=DB_PORT
+    )
 
-app.config['SQLALCHEMY_DATABASE_URI'] = (
-    f'postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}'
-    f'@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}'
-)
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-db = SQLAlchemy(app)
-
-# Example model
-class Transaction(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    amount = db.Column(db.Float, nullable=False)
-    description = db.Column(db.String(255))
-
-# Create tables only if they don't exist
-with app.app_context():
-    db.create_all()
-
-@app.route('/')
+@app.route("/")
 def home():
-    return "Personal Finance Backend is running!"
+    return "Personal Finance App is running!"
 
-if __name__ == '__main__':
-    # Bind to 0.0.0.0 so container is accessible externally
-    app.run(host='0.0.0.0', port=5000)
+@app.route("/transactions", methods=["GET"])
+def list_transactions():
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM transactions;")
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        return jsonify(rows)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/transactions", methods=["POST"])
+def add_transaction():
+    print("POST request received!")
+    data = request.get_json()
+    print("Payload:", data)
+    amount = data.get("amount")
+    category = data.get("category")
+    t_type = data.get("type")
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO transactions (amount, category, type) VALUES (%s, %s, %s);",
+            (amount, category, t_type)
+        )
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({"message": "Transaction added successfully"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# if __name__ == "__main__":
+#     app.run(host="0.0.0.0", port=5000)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
