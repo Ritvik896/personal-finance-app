@@ -2,6 +2,52 @@
 
 This is a Flask-based Personal Finance Tracking Web Application. Users can register/login, add daily income and expenses, categorize transactions, and view summaries.
 
+[ NOTE: This is Step 2 Here tf is useless as of now becaus ewe have manually configured RDS in AWS for postgres engine]
+If you come back to this use the below to setup Postgres
+
+Database identifier: personalfinance-db
+Master username: postgres
+Master password: #Rks2751
+
+Copy the writeendpoint details (ensure Publicy Accesible is Yes)
+-> Open psql
+Server [localhost]: personalfinance-db-instance-1.cj4f91ra26ed.ap-south-1.rds.amazonaws.com
+Database [postgres]: postgres
+Port [5432]:
+Username [postgres]: postgres
+Password for user postgres:
+
+psql (13.20, server 17.4)
+WARNING: psql major version 13, server major version 17.
+Some psql features might not work.
+WARNING: Console code page (437) differs from Windows code page (1252)
+8-bit characters might not work correctly. See psql reference
+page "Notes for Windows users" for details.
+SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, bits: 256, compression: off)
+Type "help" for help.
+
+postgres=> CREATE TABLE IF NOT EXISTS transactions (
+postgres(> id SERIAL PRIMARY KEY,
+postgres(> amount NUMERIC(10,2),
+postgres(> category VARCHAR(50),
+postgres(> type VARCHAR(10),
+postgres(> created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+postgres(> );
+CREATE TABLE
+postgres=> select _ from transacctions:
+postgres-> select _ from transactions;
+ERROR: syntax error at or near ":"
+LINE 1: select _ from transacctions:
+^
+postgres=> select _ from transactions;
+id | amount | category | type | created_at
+----+--------+----------+------+------------
+(0 rows)
+
+postgres=>
+
+Use the above for reference
+
 ---
 
 ## ✅ Features Completed So Far
@@ -31,8 +77,8 @@ personal-finance-app/
 ├── Dockerfile
 ├── README.md
 
-
 **Notes:**
+
 - `requirements.txt` is in `backend/` as all Python code is inside that folder.
 - `Dockerfile` and `docker-compose.yml` are in root for easier container orchestration.
 
@@ -40,7 +86,7 @@ personal-finance-app/
 
 ## ⚙️ Environment Variables (`.env`)
 
-```env
+````env
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=#Rks2751
 POSTGRES_DB=postgres
@@ -185,3 +231,4 @@ Prepare Terraform outputs for RDS endpoint.
 Deploy Flask backend to EC2 (Phase 3).
 
 Ensure proper security group and port access for EC2.
+````
