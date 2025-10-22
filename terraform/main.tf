@@ -44,7 +44,7 @@ resource "aws_security_group" "app_sg" {
 resource "aws_db_instance" "postgres" {
   identifier              = "personal-finance-db"
   engine                  = "postgres"
-  engine_version          = "15.4"
+  engine_version          = "15.14"
   instance_class          = "db.t3.micro"
   allocated_storage       = 20
   db_name                 = var.db_name
