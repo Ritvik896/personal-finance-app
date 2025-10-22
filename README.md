@@ -1,234 +1,609 @@
-# Personal Finance Web Application
+# Personal Finance Tracker
 
-This is a Flask-based Personal Finance Tracking Web Application. Users can register/login, add daily income and expenses, categorize transactions, and view summaries.
-
-[ NOTE: This is Step 2 Here tf is useless as of now becaus ewe have manually configured RDS in AWS for postgres engine]
-If you come back to this use the below to setup Postgres
-
-Database identifier: personalfinance-db
-Master username: postgres
-Master password: #Rks2751
-
-Copy the writeendpoint details (ensure Publicy Accesible is Yes)
--> Open psql
-Server [localhost]: personalfinance-db-instance-1.cj4f91ra26ed.ap-south-1.rds.amazonaws.com
-Database [postgres]: postgres
-Port [5432]:
-Username [postgres]: postgres
-Password for user postgres:
-
-psql (13.20, server 17.4)
-WARNING: psql major version 13, server major version 17.
-Some psql features might not work.
-WARNING: Console code page (437) differs from Windows code page (1252)
-8-bit characters might not work correctly. See psql reference
-page "Notes for Windows users" for details.
-SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, bits: 256, compression: off)
-Type "help" for help.
-
-postgres=> CREATE TABLE IF NOT EXISTS transactions (
-postgres(> id SERIAL PRIMARY KEY,
-postgres(> amount NUMERIC(10,2),
-postgres(> category VARCHAR(50),
-postgres(> type VARCHAR(10),
-postgres(> created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-postgres(> );
-CREATE TABLE
-postgres=> select _ from transacctions:
-postgres-> select _ from transactions;
-ERROR: syntax error at or near ":"
-LINE 1: select _ from transacctions:
-^
-postgres=> select _ from transactions;
-id | amount | category | type | created_at
-----+--------+----------+------+------------
-(0 rows)
-
-postgres=>
-
-Use the above for reference
+A full-stack web application for tracking personal income and expenses, built with Python Flask and deployed on AWS using modern DevOps practices.
 
 ---
 
-## ✅ Features Completed So Far
+## 📋 Table of Contents
 
-- Flask backend APIs for:
-  - Adding transactions (`POST /transactions`)
-  - Listing transactions (`GET /transactions`)
-- PostgreSQL integration (RDS on AWS)
-- Dockerized backend for containerized development
-- `.env` and `config.py` used for environment-specific configuration
-- Project structured for future CI/CD and Terraform automation
+- [Project Overview](#project-overview)
+- [Features](#features)
+- [Technology Stack](#technology-stack)
+- [Project Architecture](#project-architecture)
+- [Phase-wise Implementation](#phase-wise-implementation)
+- [Local Development Setup](#local-development-setup)
+- [AWS Deployment with Terraform](#aws-deployment-with-terraform)
+- [API Endpoints](#api-endpoints)
+- [Project Structure](#project-structure)
+- [Troubleshooting](#troubleshooting)
+- [Future Enhancements](#future-enhancements)
+- [Contributing](#contributing)
 
 ---
 
-## 📁 Project Directory Structure
+## 🎯 Project Overview
 
+This project serves as a **hands-on learning experience** for end-to-end application development, covering:
+
+- Backend API development with Python Flask
+- Database design and management (PostgreSQL)
+- Containerization with Docker
+- Infrastructure as Code (IaC) with Terraform
+- Cloud deployment on AWS (EC2, RDS)
+- CI/CD pipelines (planned)
+- Container orchestration with Kubernetes (planned)
+
+**Primary Goal:** Build a production-ready personal finance tracking application while learning modern DevOps practices.
+
+---
+
+## ✨ Features
+
+### Current Features (Phase 3)
+- ✅ User authentication (register/login)
+- ✅ Add daily income and expenses
+- ✅ Categorize transactions
+- ✅ View all transactions
+- ✅ RESTful API design
+- ✅ PostgreSQL database integration
+- ✅ Dockerized application
+- ✅ AWS cloud deployment
+
+### Planned Features
+- 🔄 Monthly spend summaries
+- 🔄 Category-wise analytics
+- 🔄 Data visualization dashboard
+- 🔄 Export transactions to CSV
+- 🔄 Budget alerts and notifications
+
+---
+
+## 🛠 Technology Stack
+
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| **Backend** | Python 3.9, Flask | REST API development |
+| **Database** | PostgreSQL 15.4 | Data persistence |
+| **ORM** | SQLAlchemy | Database abstraction |
+| **Containerization** | Docker, Docker Compose | Application packaging |
+| **Infrastructure** | Terraform | Infrastructure as Code |
+| **Cloud Platform** | AWS (EC2, RDS, VPC) | Application hosting |
+| **Version Control** | Git, GitHub | Source code management |
+| **Orchestration** | Kubernetes (EKS) - Planned | Container orchestration |
+| **CI/CD** | Jenkins - Planned | Automated deployments |
+| **Config Management** | Ansible - Planned | Server configuration |
+
+---
+
+## 🏗 Project Architecture
+
+### High-Level Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         User/Client                          │
+└────────────────────────┬────────────────────────────────────┘
+                         │ HTTP Requests
+                         ↓
+┌─────────────────────────────────────────────────────────────┐
+│                    AWS EC2 Instance                          │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │           Docker Container                            │   │
+│  │  ┌────────────────────────────────────────────────┐  │   │
+│  │  │         Flask Application                      │  │   │
+│  │  │  - REST API Endpoints                          │  │   │
+│  │  │  - Business Logic                              │  │   │
+│  │  │  - SQLAlchemy ORM                              │  │   │
+│  │  └─────────────────┬──────────────────────────────┘  │   │
+│  └────────────────────┼─────────────────────────────────┘   │
+└───────────────────────┼─────────────────────────────────────┘
+                        │ PostgreSQL Connection
+                        ↓
+┌─────────────────────────────────────────────────────────────┐
+│              AWS RDS PostgreSQL Database                     │
+│  - Tables: transactions                                      │
+│  - Managed database service                                  │
+│  - Automatic backups                                         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Network Architecture
+
+```
+AWS VPC (Default)
+├── Security Group: personal-finance-sg
+│   ├── Ingress: Port 22 (SSH)
+│   ├── Ingress: Port 5000 (Flask API)
+│   ├── Ingress: Port 5432 (PostgreSQL)
+│   └── Egress: All traffic
+│
+├── EC2 Instance (t2.micro)
+│   ├── AMI: Amazon Linux 2
+│   ├── Public IP: Auto-assigned
+│   └── Docker Container: Flask App
+│
+└── RDS Instance (db.t3.micro)
+    ├── Engine: PostgreSQL 15.4
+    ├── Storage: 20 GB
+    └── Endpoint: Auto-generated
+```
+
+---
+
+## 📦 Phase-wise Implementation
+
+### ✅ Phase 1: Local Development (Completed)
+- Set up Python virtual environment
+- Develop Flask application with basic CRUD operations
+- Implement SQLAlchemy models
+- Test locally with SQLite
+
+### ✅ Phase 2: Dockerization (Completed)
+- Create Dockerfile for Flask application
+- Write docker-compose.yml for local testing
+- Implement database readiness check script
+- Test containerized application locally
+
+### ✅ Phase 3: Infrastructure Setup (Current Phase)
+- Write Terraform configurations for AWS resources
+- Provision EC2 instance for application hosting
+- Set up RDS PostgreSQL database
+- Configure security groups and networking
+- Automate deployment via user_data script
+
+### 🔄 Phase 4: Kubernetes Deployment (Planned)
+- Deploy to local Kubernetes (minikube)
+- Configure Kubernetes manifests (Deployments, Services)
+- Deploy to AWS EKS cluster
+- Implement horizontal pod autoscaling
+
+### 🔄 Phase 5: CI/CD Pipeline (Planned)
+- Set up Jenkins server
+- Create pipeline for automated builds
+- Implement automated testing
+- Configure deployment stages
+
+### 🔄 Phase 6: Configuration Management (Planned)
+- Write Ansible playbooks for server configuration
+- Automate application updates
+- Optional: Integrate Kafka for event streaming
+
+### 🔄 Phase 7: Frontend Development (Planned)
+- Build responsive web UI with React/HTML/CSS
+- Host frontend on S3 + CloudFront
+- Integrate with backend API
+
+---
+
+## 💻 Local Development Setup
+
+### Prerequisites
+
+- Python 3.9+
+- Git
+- Docker & Docker Compose
+- PostgreSQL (optional for local testing)
+
+### Installation Steps
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/Ritvik896/personal-finance-app.git
+   cd personal-finance-app
+   ```
+
+2. **Create Python virtual environment**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. **Install dependencies**
+   ```bash
+   pip install -r backend/requirements.txt
+   ```
+
+4. **Set up environment variables**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your local PostgreSQL credentials
+   ```
+
+5. **Run with Docker Compose**
+   ```bash
+   docker-compose up --build
+   ```
+
+6. **Test the API**
+   ```bash
+   curl http://localhost:5000/
+   # Expected: {"message":"Personal Finance Tracker API is running!"}
+   ```
+
+---
+
+## ☁️ AWS Deployment with Terraform
+
+### Prerequisites
+
+- AWS Account with programmatic access
+- AWS CLI configured (`aws configure`)
+- Terraform installed (v1.0+)
+- EC2 Key Pair created in AWS (ap-south-1 region)
+
+### Deployment Steps
+
+#### 1. Configure AWS Credentials
+
+```bash
+aws configure
+# Enter:
+# - AWS Access Key ID
+# - AWS Secret Access Key
+# - Default region: ap-south-1
+# - Default output format: json
+```
+
+#### 2. Verify EC2 Key Pair
+
+```bash
+# Check if key pair exists
+aws ec2 describe-key-pairs --key-names phase3-key --region ap-south-1
+
+# If not exists, create it:
+aws ec2 create-key-pair \
+  --key-name phase3-key \
+  --region ap-south-1 \
+  --query 'KeyMaterial' \
+  --output text > ~/.ssh/phase3-key.pem
+
+chmod 400 ~/.ssh/phase3-key.pem
+```
+
+#### 3. Initialize Terraform
+
+```bash
+cd terraform/
+terraform init
+```
+
+#### 4. Review Infrastructure Plan
+
+```bash
+terraform plan
+# Review the resources that will be created:
+# - Security Group
+# - RDS PostgreSQL Instance
+# - EC2 Instance
+```
+
+#### 5. Deploy Infrastructure
+
+```bash
+terraform apply
+# Type 'yes' when prompted
+# Wait 8-12 minutes for provisioning
+```
+
+#### 6. Get Deployment Outputs
+
+```bash
+terraform output
+# Save the following:
+# - ec2_public_ip: <IP_ADDRESS>
+# - rds_endpoint: <RDS_ENDPOINT>
+```
+
+#### 7. Verify Deployment
+
+```bash
+# SSH into EC2 instance
+ssh -i ~/.ssh/phase3-key.pem ec2-user@<EC2_PUBLIC_IP>
+
+# Check Docker container
+docker ps
+
+# Check application logs
+docker logs personal_finance_backend
+
+# Exit SSH
+exit
+```
+
+#### 8. Test Deployed API
+
+```bash
+# Set EC2 IP
+export EC2_IP=<YOUR_EC2_PUBLIC_IP>
+
+# Health check
+curl http://$EC2_IP:5000/
+
+# Get transactions
+curl http://$EC2_IP:5000/transactions
+
+# Add transaction
+curl -X POST http://$EC2_IP:5000/transactions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Grocery Shopping",
+    "amount": 150.50,
+    "category": "Food",
+    "date": "2025-10-23"
+  }'
+```
+
+#### 9. Cleanup Resources
+
+```bash
+cd terraform/
+terraform destroy
+# Type 'yes' when prompted
+```
+
+---
+
+## 🔌 API Endpoints
+
+### Base URL
+```
+http://<EC2_PUBLIC_IP>:5000
+```
+
+### Endpoints
+
+| Method | Endpoint | Description | Request Body |
+|--------|----------|-------------|--------------|
+| GET | `/` | Health check | - |
+| GET | `/transactions` | Get all transactions | - |
+| POST | `/transactions` | Add new transaction | JSON (see below) |
+
+### Request/Response Examples
+
+#### GET `/`
+**Response:**
+```json
+{
+  "message": "Personal Finance Tracker API is running!"
+}
+```
+
+#### GET `/transactions`
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "description": "Grocery Shopping",
+    "amount": 150.50,
+    "category": "Food",
+    "date": "2025-10-23"
+  }
+]
+```
+
+#### POST `/transactions`
+**Request Body:**
+```json
+{
+  "description": "Grocery Shopping",
+  "amount": 150.50,
+  "category": "Food",
+  "date": "2025-10-23"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Transaction added successfully"
+}
+```
+
+---
+
+## 📁 Project Structure
+
+```
 personal-finance-app/
 │
 ├── backend/
-│ ├── app.py
-│ ├── config.py
-│ ├── requirements.txt
-│ ├── wait-for-postgres.sh
+│   ├── app.py                 # Main Flask application
+│   ├── config.py              # Database configuration
+│   ├── requirements.txt       # Python dependencies
+│   ├── wait-for-postgres.sh   # DB readiness check script
+│   └── __init__.py            # Package initializer
 │
-├── .env
-├── docker-compose.yml
-├── Dockerfile
-├── README.md
-
-**Notes:**
-
-- `requirements.txt` is in `backend/` as all Python code is inside that folder.
-- `Dockerfile` and `docker-compose.yml` are in root for easier container orchestration.
+├── terraform/
+│   ├── main.tf                # Main infrastructure definition
+│   ├── variables.tf           # Input variables
+│   └── outputs.tf             # Output values
+│
+├── .env                       # Environment variables (not in git)
+├── .env.example               # Example environment file
+├── .gitignore                 # Git ignore rules
+├── Dockerfile                 # Docker image definition
+├── docker-compose.yml         # Docker Compose configuration
+└── README.md                  # This file
+```
 
 ---
 
-## ⚙️ Environment Variables (`.env`)
+## 🔧 Troubleshooting
 
-````env
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=#Rks2751
-POSTGRES_DB=postgres
-POSTGRES_HOST=personalfinance-db.cluster-xxxxxx.ap-south-1.rds.amazonaws.com
-POSTGRES_PORT=5432
-FLASK_ENV=development
-These are loaded in config.py using python-dotenv.
+### Common Issues and Solutions
 
-🐳 Docker Setup
+#### 1. Terraform: "InvalidKeyPair.NotFound"
 
-Dockerfile (root):
+**Problem:** EC2 key pair doesn't exist in AWS.
 
-Builds backend container
+**Solution:**
+```bash
+aws ec2 create-key-pair \
+  --key-name phase3-key \
+  --region ap-south-1 \
+  --query 'KeyMaterial' \
+  --output text > ~/.ssh/phase3-key.pem
 
-Installs Python dependencies
+chmod 400 ~/.ssh/phase3-key.pem
+```
 
-Waits for Postgres to be ready using wait-for-postgres.sh
+#### 2. SSH: "Permission denied (publickey)"
 
-docker-compose.yml (root):
+**Problem:** Incorrect key file permissions.
 
-backend service depends on postgres service
+**Solution:**
+```bash
+chmod 400 ~/.ssh/phase3-key.pem
+```
 
-Environment variables are injected via .env
+#### 3. Docker Container Not Running
 
-Port mapping: 5000:5000 for Flask, 5432:5432 for Postgres (if running locally)
+**Problem:** User data script failed or Docker not started.
 
+**Solution:**
+```bash
+# SSH to EC2
+ssh -i ~/.ssh/phase3-key.pem ec2-user@<EC2_IP>
 
+# Check user data logs
+sudo cat /var/log/cloud-init-output.log
 
-🛠 Local Testing
+# Manually start Docker
+sudo systemctl start docker
+cd /home/ec2-user/app
+sudo docker-compose up -d --build
+```
 
-Ensure .env is updated with RDS endpoint
+#### 4. API Returns "Connection Refused"
 
-Run:
+**Problem:** Security group not allowing traffic or Flask not running.
 
-cd backend
-docker-compose up --build
+**Solution:**
+```bash
+# Check security group in AWS Console
+# Ensure port 5000 is open to 0.0.0.0/0
 
+# SSH to EC2 and check Flask logs
+docker logs personal_finance_backend
+```
 
-Access API at:
+#### 5. Database Connection Timeout
 
-http://localhost:5000/
+**Problem:** RDS not ready or wrong endpoint.
 
-✅ Completed Steps So Far
+**Solution:**
+```bash
+# Wait 2-3 minutes after terraform apply
+# Check .env file on EC2 has correct RDS endpoint
+cat /home/ec2-user/app/.env | grep POSTGRES_HOST
+```
 
-Created Flask backend with PostgreSQL integration.
+---
 
-Dockerized backend and Postgres (for local testing).
+## 🚀 Future Enhancements
 
-Created .env and config.py to manage environment variables.
+### Short-term Goals
+- [ ] Add user authentication with JWT tokens
+- [ ] Implement transaction update and delete endpoints
+- [ ] Add date range filtering for transactions
+- [ ] Create monthly summary endpoint
+- [ ] Add category-wise expense breakdown
 
-Created transactions table in RDS.
+### Medium-term Goals
+- [ ] Build React.js frontend
+- [ ] Implement data visualization with charts
+- [ ] Add budget setting and tracking
+- [ ] Email notifications for budget alerts
+- [ ] Export data to CSV/PDF
 
-Verified Dockerized Flask app can connect to RDS with credentials from .env.
+### Long-term Goals
+- [ ] Multi-user support with role-based access
+- [ ] Mobile application (React Native)
+- [ ] Machine learning for expense prediction
+- [ ] Integration with banking APIs
+- [ ] Recurring transaction support
 
-Added wait-for-postgres.sh for smooth container startup.
+---
 
-🛠 Next Steps (Phase 3 – AWS & Terraform)
+## 📝 Environment Variables
 
-Modify Terraform scripts to create RDS and EC2 (already partially done).
+### Required Variables
 
-Test Flask app connecting to AWS RDS.
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `POSTGRES_USER` | PostgreSQL username | `postgres` |
+| `POSTGRES_PASSWORD` | PostgreSQL password | `your_password` |
+| `POSTGRES_DB` | Database name | `postgres` |
+| `POSTGRES_HOST` | Database host/endpoint | `localhost` or RDS endpoint |
+| `POSTGRES_PORT` | Database port | `5432` |
+| `FLASK_ENV` | Flask environment | `development` or `production` |
 
-Add outputs to Terraform for RDS endpoint.
-
-Prepare for deployment on EC2.
-
----------------------------------------------
-
-# Quick Start – Personal Finance App
-
-## 1️⃣ Clone Repository
+### Example .env File
 
 ```bash
-git clone <your-repo-url>
-cd personal-finance-app
-git checkout phase3
-3️⃣ Configure Environment Variables
-
-Create .env in root with your AWS RDS credentials:
-
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=#Rks2751
+POSTGRES_PASSWORD=your_secure_password
 POSTGRES_DB=postgres
-POSTGRES_HOST=personalfinance-db.cluster-xxxxxx.ap-south-1.rds.amazonaws.com
+POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 FLASK_ENV=development
+```
 
+---
 
-config.py automatically loads these variables.
+## 🤝 Contributing
 
-4️⃣ Run Locally with Docker
-# Ensure backend is in root Docker context
-docker-compose up --build
+This is a personal learning project, but suggestions and feedback are welcome!
 
+### How to Contribute
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-Backend runs on http://localhost:5000/
+---
 
-Flask waits for Postgres to be ready using wait-for-postgres.sh
+## 📄 License
 
-5️⃣ Test Endpoints
+This project is open source and available for educational purposes.
 
-Health Check: GET /
+---
 
-List Transactions: GET /transactions
+## 👤 Author
 
-Add Transaction: POST /transactions with JSON payload:
+**Ritvik Kumar Sharma**
 
-{
-  "amount": 500,
-  "category": "Groceries",
-  "type": "expense"
-}
+- GitHub: [@Ritvik896](https://github.com/Ritvik896)
+- Project Link: [https://github.com/Ritvik896/personal-finance-app](https://github.com/Ritvik896/personal-finance-app)
 
-6️⃣ AWS RDS
+---
 
-Ensure RDS is Publicly Accessible.
+## 🙏 Acknowledgments
 
-Make table transactions exists:
+- Flask documentation for excellent API examples
+- AWS documentation for infrastructure guidance
+- Terraform community for IaC best practices
+- Docker documentation for containerization patterns
 
-CREATE TABLE transactions (
-  id SERIAL PRIMARY KEY,
-  amount NUMERIC(10,2),
-  category VARCHAR(50),
-  type VARCHAR(10),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+---
 
-7️⃣ Notes
+## 📊 Project Status
 
-Dockerfile is in root; requirements.txt is in backend/.
+**Current Phase:** Phase 3 - Infrastructure Setup (Terraform Deployment) ✅
 
-wait-for-postgres.sh ensures backend waits for Postgres availability.
+**Last Updated:** October 23, 2025
 
-You can test locally with Docker or directly connect to RDS using .env.
+---
 
-Terraform will be added later to automate EC2/RDS provisioning.
+## 📞 Support
 
-8️⃣ Next Steps
+For issues, questions, or suggestions:
+- Open an issue on GitHub
+- Check the [Troubleshooting](#troubleshooting) section
+- Review AWS CloudWatch logs for detailed error messages
 
-Prepare Terraform outputs for RDS endpoint.
+---
 
-Deploy Flask backend to EC2 (Phase 3).
-
-Ensure proper security group and port access for EC2.
-````
+**Happy Coding! 🚀**

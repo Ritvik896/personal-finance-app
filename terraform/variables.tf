@@ -1,3 +1,7 @@
+variable "region" {
+  default = "ap-south-1"
+}
+
 variable "db_username" {
   default = "postgres"
 }
@@ -15,6 +19,3 @@ variable "key_name" {
   default     = "phase3-key"
 }
 
-variable "region" {
-  default = "ap-south-1"  # Mumbai region for lower cost in India
-}

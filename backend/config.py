@@ -13,3 +13,5 @@ DB_NAME = os.getenv("POSTGRES_DB", "postgres")
 
 # SQLAlchemy URI (optional)
 SQLALCHEMY_DATABASE_URI = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+
+
