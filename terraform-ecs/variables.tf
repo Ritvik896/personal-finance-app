@@ -72,7 +72,7 @@ variable "health_check_path" {
 variable "docker_image" {
   description = "Docker image for the application"
   type        = string
-  default     = "public.ecr.aws/docker/library/python:3.9-slim"  # We'll build our own later
+  default     = "878740762729.dkr.ecr.ap-south-1.amazonaws.com/personal-finance-dev:latest"  # We'll build our own later
 }
 
 # Auto Scaling

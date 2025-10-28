@@ -1,3 +1,39 @@
-venv/ 
-__pycache__/ 
-.env 
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+
+# Kubernetes
+*.kubeconfig
+
+# AWS
+*.pem
+.aws/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
