@@ -150,97 +150,266 @@ Routes HTTP/HTTPS traffic to containers:
 
 ## 🚀 Deployment Steps
 
-### **Step 1: Prepare Docker Image**
+### **Step 1: Deploy Infrastructure First**
 
-**Currently, our Terraform uses a placeholder image. We have two options:**
-
-#### **Option A: Use Public Image (Quick Start)**
-
-For initial testing, we'll use the public Python image. Later, we'll build and push our custom image.
-
-**Skip to Step 2** - The Terraform is configured to use a placeholder image for now.
-
-#### **Option B: Build and Push Custom Image (Recommended)**
-
-We'll come back to this after confirming the infrastructure works.
-
----
-
-### **Step 2: Navigate to terraform-ecs Directory**
+First, we'll create all AWS resources WITHOUT a working application. This helps us understand what gets created.
 
 ```bash
-cd personal-finance-app/terraform-ecs/
-```
+cd terraform-ecs/
 
----
-
-### **Step 3: Initialize Terraform**
-
-```bash
+# Initialize Terraform
 terraform init
+
+# Expected output:
+# Initializing the backend...
+# Terraform has been successfully initialized!
 ```
-
-**Expected output:**
-```
-Initializing the backend...
-Initializing provider plugins...
-- Finding hashicorp/aws versions matching "~> 5.0"...
-- Installing hashicorp/aws v5.x.x...
-
-Terraform has been successfully initialized!
-```
-
----
-
-### **Step 4: Review Configuration**
 
 ```bash
-# Validate syntax
+# Validate configuration
 terraform validate
 
 # Expected: Success! The configuration is valid.
 ```
 
----
-
-### **Step 5: Plan Deployment**
-
 ```bash
+# Review what will be created
 terraform plan
+
+# Review carefully - should show ~20 resources to create
 ```
 
-**Review what will be created:**
-- ✅ RDS PostgreSQL instance
+```bash
+# Deploy infrastructure
+terraform apply
+
+# Type: yes
+
+# ⏱️ Wait 10-15 minutes
+```
+
+**What gets created:**
 - ✅ ECS Cluster
-- ✅ ECS Task Definition
-- ✅ ECS Service
 - ✅ Application Load Balancer
-- ✅ Target Group
+- ✅ RDS PostgreSQL
 - ✅ Security Groups
 - ✅ IAM Roles
+- ✅ **ECR Repository** (for Docker images)
 - ✅ CloudWatch Log Group
 - ✅ Auto Scaling Policies
 
-**Should show:** `Plan: XX to add, 0 to change, 0 to destroy`
+**Note:** ECS tasks will fail at this point - this is EXPECTED! We haven't pushed our Docker image yet.
 
 ---
 
-### **Step 6: Deploy Infrastructure**
+### **Step 2: Get ECR Repository URL**
 
 ```bash
-terraform apply
+# Get ECR repository URL from Terraform outputs
+terraform output ecr_repository_url
 
-# Type 'yes' when prompted
+# Example output:
+# 878740762729.dkr.ecr.ap-south-1.amazonaws.com/personal-finance-dev
+
+# Save this URL - you'll need it in the next steps!
 ```
 
-**⏱️ Wait Time:** 10-15 minutes
+---
 
-**What's happening:**
-1. (0-3 min) Security groups created
-2. (3-10 min) RDS database provisioning
-3. (10-12 min) Load balancer created
-4. (12-14 min) ECS cluster and service created
-5. (14-15 min) Tasks starting up
+### **Step 3: Build and Push Docker Image to ECR**
+
+Now we'll build our Flask application Docker image and push it to Amazon ECR.
+
+#### **3.1: Run Build Script**
+
+```bash
+# Navigate to project root
+cd ..  # Go back to personal-finance-app/
+
+# Windows PowerShell:
+.\scripts\build-and-push.ps1
+
+# macOS/Linux:
+chmod +x scripts/build-and-push.sh
+./scripts/build-and-push.sh
+```
+
+**⏱️ Wait Time:** 3-5 minutes
+
+**What the script does:**
+1. Authenticates Docker with ECR
+2. Builds Docker image from your Dockerfile
+3. Tags image for ECR
+4. Pushes image to ECR repository
+
+**Expected output:**
+```
+=================================
+Building and Pushing Docker Image
+=================================
+ECR Repository: 878740762729.dkr.ecr.ap-south-1.amazonaws.com/personal-finance-dev
+Image Tag: latest
+
+Step 1: Authenticating with ECR...
+✓ Authentication successful
+
+Step 2: Building Docker image...
+✓ Image built successfully
+
+Step 3: Tagging image for ECR...
+✓ Image tagged successfully
+
+Step 4: Pushing image to ECR...
+✓ Image pushed successfully
+
+=================================
+Build Complete!
+=================================
+Image URL: 878740762729.dkr.ecr.ap-south-1.amazonaws.com/personal-finance-dev:latest
+```
+
+---
+
+### **Step 4: Update Terraform Variables with ECR Image**
+
+**⚠️ CRITICAL MANUAL STEP:**
+
+You need to update the `docker_image` variable with your actual ECR image URL.
+
+#### **4.1: Open terraform-ecs/variables.tf**
+
+Find this section (around line 63):
+
+```hcl
+variable "docker_image" {
+  description = "Docker image for the application"
+  type        = string
+  default     = "public.ecr.aws/docker/library/python:3.9-slim"  # ← OLD VALUE
+}
+```
+
+#### **4.2: Replace with Your ECR Image URL**
+
+```hcl
+variable "docker_image" {
+  description = "Docker image for the application"
+  type        = string
+  default     = "878740762729.dkr.ecr.ap-south-1.amazonaws.com/personal-finance-dev:latest"  # ← YOUR ECR URL
+}
+```
+
+**Important:**
+- Replace `878740762729` with your AWS account ID
+- The URL should match what you got from `terraform output ecr_repository_url`
+- Keep `:latest` at the end
+
+#### **4.3: Save the File**
+
+Make sure to save `variables.tf` after making the change!
+
+---
+
+### **Step 5: Redeploy with Custom Docker Image**
+
+Now that we have our image in ECR and updated the variable, let's deploy the actual application:
+
+```bash
+# Navigate back to terraform-ecs
+cd terraform-ecs/
+
+# Apply changes
+terraform apply
+
+# Review changes - should show:
+# - New task definition revision will be created
+# - ECS service will be updated
+
+# Type: yes
+```
+
+**⏱️ Wait Time:** 3-5 minutes
+
+**What happens:**
+1. Terraform creates new task definition revision with your ECR image
+2. ECS service updated to use new task definition
+3. ECS performs rolling deployment:
+   - Starts new tasks with your Flask app
+   - Waits for health checks to pass
+   - Drains old (failing) tasks
+   - Completes deployment
+
+---
+
+### **Step 6: Monitor Deployment Progress**
+
+#### **6.1: Check Service Status**
+
+```bash
+# Check if tasks are running
+aws ecs describe-services \
+  --cluster personal-finance-dev-cluster \
+  --services personal-finance-dev-service \
+  --region ap-south-1 \
+  --query 'services[0].{Running:runningCount,Desired:desiredCount,Status:status}'
+
+# Expected output:
+# {
+#   "Running": 1,
+#   "Desired": 1,
+#   "Status": "ACTIVE"
+# }
+```
+
+Wait until `Running` equals `Desired`.
+
+---
+
+#### **6.2: Check Target Health**
+
+```bash
+# Check if load balancer sees healthy targets
+aws elbv2 describe-target-health \
+  --target-group-arn $(terraform output -raw target_group_arn) \
+  --region ap-south-1
+
+# Look for: "State": "healthy"
+```
+
+**Expected output:**
+```json
+{
+  "TargetHealthDescriptions": [
+    {
+      "Target": {
+        "Id": "10.0.x.x",
+        "Port": 5000
+      },
+      "HealthCheckPort": "5000",
+      "TargetHealth": {
+        "State": "healthy"
+      }
+    }
+  ]
+}
+```
+
+---
+
+#### **6.3: View Application Logs**
+
+```bash
+# Stream logs in real-time
+aws logs tail /ecs/personal-finance-dev --follow
+
+# Look for these key messages:
+# ✓ Waiting for Postgres at personal-finance-dev-db...
+# ✓ Postgres is up - executing command
+# ✓ * Serving Flask app 'app'
+# ✓ * Running on all addresses (0.0.0.0)
+# ✓ * Running on http://127.0.0.1:5000
+```
+
+**Press Ctrl+C to stop following logs**
 
 ---
 
